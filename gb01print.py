@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# THIS SCRIPT IS FOR THE BLE THERMAL PRINTER, WHICH IS NO LONGER USED IN THE PROJECT, BUT KEPT HERE FOR REFERENCE PURPOSES
+# UNITL I PROPERLY LINK EVERYTHING UP, THE ORIGINAL IS HERE: https://github.com/amber-sixel/gb01print/blob/main/gb01print.py
+# WHICH WAS FORKED FROM https://github.com/WerWolv/PythonCatPrinter
+
 import asyncio
 import argparse
 
