@@ -118,6 +118,7 @@ def pulse_enable():
     GPIO.output(lcd.pin_e, GPIO.LOW)
     time.sleep(0.0005)
 
+# Pulse timing for "pressing" Game Boy buttons. Still tweaking this. 
 def pulse_pin(pin):
     if pin == START:
         GPIO.output(pin, 1)
@@ -211,6 +212,7 @@ def calculate_zodiac(month, day):
     else:
         return 'Sagittarius'
 
+# This function is intended to control the Game Boy
 def control_external_device(birthdate):
     birth_month, birth_day = map(int, [birthdate[:2], birthdate[2:]])
     pulse_pin(START)
@@ -239,7 +241,6 @@ lcd.clear()
 time.sleep(0.3)
 lcd.write_string(u'Insert offering\n\ror press ENTER')
 
-# This code will run once before entering the main loop
 while True:
     # Initial State: Wait for offering
     lcd.clear()
@@ -280,7 +281,6 @@ while True:
 
             lcd.clear()
             lcd.write_string("Born under:\n\r" + zodiac_sign)
-           # subprocess.call(["python3", "zodiac.py", zodiac_sign])
             time.sleep(1)
             lcd.clear()
             lcd.write_string(u'Opening the\n\rCircle')
@@ -289,7 +289,6 @@ while True:
             lcd.write_string(u'   Gaze upon the\n\r<---------Oracle')
             control_external_device(birthdate)
             time.sleep(8)
-           # pulse_pin(SELECT)
             subprocess.call(["python3", "zodiac.py", zodiac_sign])
             pulse_pin(SELECT)
             lcd.clear()
