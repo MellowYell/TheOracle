@@ -4,7 +4,6 @@
 import sys
 sys.path.append('/home/oracle/oracle/myenv/lib/python3.9/site-packages')
 import openai
-
 import RPi.GPIO as GPIO
 import time
 import os
@@ -118,24 +117,54 @@ def pulse_enable():
     GPIO.output(lcd.pin_e, GPIO.LOW)
     time.sleep(0.0005)
 
-# Pulse timing for "pressing" Game Boy buttons. Still tweaking this. 
-def pulse_pin(pin):
-    if pin == START:
-        GPIO.output(pin, 1)
-        time.sleep(0.3)
-        GPIO.output(pin, 0)
-        time.sleep(4)
-    elif pin == RIGHT:
-        GPIO.output(pin, 1)
-        time.sleep(0.3)
-        GPIO.output(pin, 0)
-        time.sleep(0.7)
-    else:
-        GPIO.output(pin, 1)
-        time.sleep(0.3)
-        GPIO.output(pin, 0)
-        time.sleep(0.7)
+def pulse_pin(pin, delay=0.3):
+    GPIO.output(pin, GPIO.HIGH)
+    time.sleep(delay)  # Simulate button press duration
+    GPIO.output(pin, GPIO.LOW)
+    time.sleep(0.6)  # Wait after action for the system to register
 
+def control_external_device(target_date):
+    # Current date settings on the device (from your setup)
+    current_month, current_day = 22, 33
+    target_month, target_day = map(int, [target_date[:2], target_date[2:]])
+
+    # Press START to enter the date setting mode
+    pulse_pin(START)
+    time.sleep(4)  # Wait for mode to activate
+
+    # Function to adjust each date component
+    def adjust_date_component(current_value, target_value, pin_up, pin_down, delay_up, delay_down):
+        steps_up = (target_value - current_value) % 10
+        steps_down = (current_value - target_value) % 10
+
+        if steps_up <= steps_down:
+            for _ in range(steps_up):
+                pulse_pin(pin_up, delay_up)
+        else:
+            for _ in range(steps_down):
+                pulse_pin(pin_down, delay_down)
+
+    # Adjust month tens
+    adjust_date_component(current_month // 10, target_month // 10, UP, DOWN, 0.3, 0.3)
+    pulse_pin(RIGHT, 0.4)
+    time.sleep(0.5)
+    # Adjust month units
+    adjust_date_component(current_month % 10, target_month % 10, UP, DOWN, 0.3, 0.3)
+    pulse_pin(RIGHT, 0.4)
+    time.sleep(0.5)
+    
+    # Adjust day tens
+    adjust_date_component(current_day // 10, target_day // 10, UP, DOWN, 0.3, 0.3)
+    pulse_pin(RIGHT, 0.4)
+    time.sleep(0.5)
+    
+    # Adjust day units
+    adjust_date_component(current_day % 10, target_day % 10, UP, DOWN, 0.3, 0.3)
+
+    # Press START to confirm the new date
+    pulse_pin(START)
+
+    
 def get_birthdate():
     lcd.clear()
     lcd.write_string(u'Enter your\n\rbirthdate(MMDD):')
@@ -212,27 +241,6 @@ def calculate_zodiac(month, day):
     else:
         return 'Sagittarius'
 
-# This function is intended to control the Game Boy
-def control_external_device(birthdate):
-    birth_month, birth_day = map(int, [birthdate[:2], birthdate[2:]])
-    pulse_pin(START)
-    time.sleep(3)
-    # Navigate to each digit individually
-    for i in range(abs(2 - birth_month // 10)):
-        pulse_pin(DOWN)
-    pulse_pin(RIGHT)
-    for i in range(abs(2 - birth_month % 10)):
-        pulse_pin(DOWN)
-    pulse_pin(RIGHT)
-    for i in range(abs(3 - birth_day // 10)):
-        pulse_pin(DOWN)
-    pulse_pin(RIGHT)
-    for i in range(abs(3 - birth_day % 10)):
-        pulse_pin(DOWN)
-
-    # Confirm the date
-    pulse_pin(START)
-
 mode = "normal"
 start_time = None
 
@@ -241,6 +249,7 @@ lcd.clear()
 time.sleep(0.3)
 lcd.write_string(u'Insert offering\n\ror press ENTER')
 
+# This code will run once before entering the main loop
 while True:
     # Initial State: Wait for offering
     lcd.clear()
@@ -253,7 +262,7 @@ while True:
 
     while not offering_accepted:
         key, duration = check_keypad()
-
+        
         # Handle control mode key presses
         if control_mode:
             if key in KEY_TO_PIN:
@@ -273,7 +282,7 @@ while True:
     while offering_accepted:  # This loop will keep asking for birthdate until a valid one is entered.
         # Get birthdate after offering is accepted
         birthdate = get_birthdate()
-
+        #time.sleep(0.01)
         try:
             birth_month, birth_day = map(int, [birthdate[:2], birthdate[2:]])
             datetime(year=2000, month=birth_month, day=birth_day)  # this will raise an error if date is invalid
@@ -281,6 +290,7 @@ while True:
 
             lcd.clear()
             lcd.write_string("Born under:\n\r" + zodiac_sign)
+           # subprocess.call(["python3", "zodiac.py", zodiac_sign])
             time.sleep(1)
             lcd.clear()
             lcd.write_string(u'Opening the\n\rCircle')
@@ -289,6 +299,7 @@ while True:
             lcd.write_string(u'   Gaze upon the\n\r<---------Oracle')
             control_external_device(birthdate)
             time.sleep(8)
+           # pulse_pin(SELECT)
             subprocess.call(["python3", "zodiac.py", zodiac_sign])
             pulse_pin(SELECT)
             lcd.clear()
